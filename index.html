@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>能楽 能面・シテ方キャラクタークイズ</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap');
+  body { font-family: 'Noto Serif JP', serif; background: #1c1407; color: #f0e8d0; }
+  .panel { background: #2a1f0a; border: 1px solid #5a3a10; border-radius: 8px; padding: 16px; }
+  .btn-gold { background: linear-gradient(135deg, #c8960a, #8a5a05); color: #fff8e0; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: inherit; font-size: 1em; }
+  .btn-gold:hover { background: linear-gradient(135deg, #e0b020, #a07010); }
+  .btn-outline { background: transparent; color: #c8960a; border: 2px solid #c8960a; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-family: inherit; }
+  .btn-outline:hover { background: #c8960a20; }
+  .choice-btn { background: #2a1f0a; border: 2px solid #5a3a10; color: #f0e8d0; padding: 12px 16px; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.95em; width: 100%; text-align: left; transition: all 0.2s; }
+  .choice-btn:hover:not(:disabled) { border-color: #c8960a; background: #3a2a0a; }
+  .choice-btn:disabled { cursor: default; }
+  .choice-btn.correct { border-color: #22c55e; background: #052a05; color: #86efac; }
+  .choice-btn.wrong { border-color: #ef4444; background: #2a0505; color: #fca5a5; }
+  .choice-btn.reveal { border-color: #22c55e; background: #052a05; color: #86efac; opacity: 0.7; }
+  .mask-emoji { font-size: 4rem; display: block; text-align: center; }
+  .bar-bg { background: #3a2a0a; border-radius: 4px; height: 10px; }
+  .bar-fill { background: linear-gradient(90deg, #c8960a, #e0b020); height: 10px; border-radius: 4px; transition: width 0.5s ease; }
+  .tab-btn { padding: 8px 16px; border-radius: 6px 6px 0 0; border: none; cursor: pointer; font-family: inherit; font-size: 0.9em; }
+  .tab-active { background: #c8960a; color: #1c1407; font-weight: bold; }
+  .tab-inactive { background: #2a1f0a; color: #c8960a; border: 1px solid #5a3a10; }
+  .tab-inactive:hover { background: #3a2a0a; }
+  h1, h2 { color: #c8960a; }
+  .label { color: #8a7050; font-size: 0.75em; }
+</style>
+</head>
+<body class="min-h-screen p-4">
+<div class="max-w-4xl mx-auto">
+  <header class="text-center mb-6">
+    <h1 class="text-2xl font-bold mb-1">能楽 能面・シテ方キャラクタークイズ</h1>
+    <p class="text-sm" style="color:#8a7050">能面の特徴から役どころを学ぼう</p>
+  </header>
+
+  <!-- Mode Tabs -->
+  <div class="flex gap-1 mb-0">
+    <button class="tab-btn tab-active" id="tabName" data-mode="name">名前当て</button>
+    <button class="tab-btn tab-inactive" id="tabPlay" data-mode="play">演目当て</button>
+    <button class="tab-btn tab-inactive" id="tabFeature" data-mode="feature">特徴当て</button>
+    <button class="tab-btn tab-inactive" id="tabStats" data-mode="stats">成績</button>
+  </div>
+
+  <!-- Quiz Area -->
+  <div id="quizArea" class="panel" style="border-radius: 0 8px 8px 8px;">
+    <!-- Injected by JS -->
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  const masks = [
+    {
+      id: 'okina',
+      name: '翁',
+      emoji: '🎭',
+      description: '白い老翁の面。能の中でも最も神聖とされ、翁の儀式で使用される特別な面。穏やかな微笑みと白い眉が特徴。',
+      features: '白い肌、穏やかな微笑み、白眉、顎が動く独特の構造',
+      plays: ['翁'],
+      type: '翁',
+      category: '翁系'
+    },
+    {
+      id: 'ko-omote',
+      name: '小面',
+      emoji: '🌸',
+      description: '若い女性の面。能の代表的な女面で、清楚で美しい若い女性を表す。澄んだ目と小さな口が特徴。',
+      features: '白い肌、澄んだ目、小さな口、若々しい表情',
+      plays: ['羽衣', '砧', '野宮'],
+      type: '女面',
+      category: '若女系'
+    },
+    {
+      id: 'hannya',
+      name: '般若',
+      emoji: '😈',
+      description: '嫉妬に狂った女性が鬼に変身した面。二本の角と牙、吊り上がった目が特徴。金泥で彩色された上般若や白い下般若がある。',
+      features: '二本の角、牙、吊り上がった目、苦悶の表情',
+      plays: ['葵上', '道成寺', '黒塚'],
+      type: '怨霊・鬼女',
+      category: '鬼女系'
+    },
+    {
+      id: 'yaseonna',
+      name: '痩女',
+      emoji: '👻',
+      description: '痩せ衰えた女性の面。生き霊や死霊を表し、葵上や弱法師などで使用。頬がこけ、苦しみの表情を表す。',
+      features: 'やつれた頬、落ちくぼんだ目、苦悶の表情',
+      plays: ['葵上', '弱法師'],
+      type: '怨霊',
+      category: '霊女系'
+    },
+    {
+      id: 'zouonna',
+      name: '増女',
+      emoji: '🌙',
+      description: '成熟した女性の面。中年の女性を表し、小面より表情が深く落ち着いた美しさがある。松風などの漁師の娘役に使われる。',
+      features: '落ち着いた美しさ、わずかに薄い唇、成熟した表情',
+      plays: ['松風', '班女'],
+      type: '女面',
+      category: '中年女系'
+    },
+    {
+      id: 'wakionna',
+      name: '若女',
+      emoji: '💮',
+      description: '若い女性の面。小面より少し年齢が高く、高貴な女性や神女を表す。品のある美しさが特徴。',
+      features: '品のある美しさ、やや細長い顔、高貴な表情',
+      plays: ['熊野', '東北'],
+      type: '女面',
+      category: '若女系'
+    },
+    {
+      id: 'shakumi',
+      name: '曲見',
+      emoji: '🌺',
+      description: '老女を表す面。老婆の霊や老いた女神に使われ、皺が刻まれ目が細い。年輪を感じさせる深みがある。',
+      features: '皺、細い目、老いた表情、深みのある面持ち',
+      plays: ['姨捨', '檜垣'],
+      type: '老女面',
+      category: '老女系'
+    },
+    {
+      id: 'kurozuki',
+      name: '黒頭',
+      emoji: '🖤',
+      description: '黒い髪をした鬼神の面。荒ぶる神や鬼を表し、黒い髪と炯々とした目が特徴。激しい神楽で使われる。',
+      features: '黒い長髪、炯々とした目、激しい表情',
+      plays: ['紅葉狩', '土蜘蛛'],
+      type: '鬼神',
+      category: '鬼神系'
+    },
+    {
+      id: 'oobeshimi',
+      name: '大べし見',
+      emoji: '👹',
+      description: '強大な鬼神・荒神の面。大きく見開いた目と大きな口、怒りの表情が特徴。最も激しい鬼面の一つ。',
+      features: '大きく見開いた目、大きな口、強烈な怒りの表情',
+      plays: ['善知鳥', '是界'],
+      type: '荒神',
+      category: '鬼神系'
+    },
+    {
+      id: 'kitsune',
+      name: '狐',
+      emoji: '🦊',
+      description: '狐の精を表す面。白狐の面で、細い目と尖った鼻が特徴。変化した人間の姿をとった狐の霊に使われる。',
+      features: '細い目、尖った鼻、白い肌、狐の特徴',
+      plays: ['殺生石', '白狐'],
+      type: '動物霊',
+      category: '霊獣系'
+    },
+    {
+      id: 'chujo',
+      name: '中将',
+      emoji: '👑',
+      description: '高貴な若い男性の面。在原業平などの王朝貴族を表す。穏やかで品のある表情と高い鼻梁が特徴。',
+      features: '高い鼻梁、品のある表情、若々しさと気品',
+      plays: ['井筒', '杜若'],
+      type: '男面',
+      category: '若男系'
+    },
+    {
+      id: 'ko-jo',
+      name: '小尉',
+      emoji: '🌾',
+      description: '老翁の面。品格ある老人の霊を表し、白い鬚と細い目が特徴。松の精などに使われる。',
+      features: '白い鬚、細い目、穏やかな老人の表情',
+      plays: ['高砂', '老松'],
+      type: '老翁面',
+      category: '老翁系'
+    },
+    {
+      id: 'tobide',
+      name: '飛出',
+      emoji: '😳',
+      description: '目玉が飛び出したような鬼の面。超自然的な存在や雷神を表し、大きな目玉と牙が特徴。',
+      features: '飛び出た目玉、牙、驚愕・怒りの表情',
+      plays: ['雷電', '夜叉'],
+      type: '鬼神',
+      category: '鬼神系'
+    },
+    {
+      id: 'omi-onna',
+      name: '近江女',
+      emoji: '🌊',
+      description: '水辺の女性や漁師の妻を表す面。素朴で清楚な表情が特徴で、地方の女性を演じる際に使われる。',
+      features: '素朴な表情、清楚さ、地方女性の雰囲気',
+      plays: ['隅田川', '三井寺'],
+      type: '女面',
+      category: '中年女系'
+    },
+    {
+      id: 'manbi',
+      name: '万媚',
+      emoji: '✨',
+      description: '妖艶な女性の面。媚びのある表情で、鬼女の変身前の美女や夢に現れる女神に使われる。',
+      features: '妖艶な表情、やや流し目、媚びのある唇',
+      plays: ['葵上', '道成寺'],
+      type: '女面',
+      category: '若女系'
+    }
+  ];
+
+  const categories = [...new Set(masks.map(m => m.category))];
+
+  let mode = 'name';
+  let currentQ = null;
+  let answered = false;
+  let score = { total: 0, correct: 0 };
+  let catStats = {};
+  let streak = 0;
+  let bestStreak = 0;
+
+  categories.forEach(c => { catStats[c] = { total: 0, correct: 0 }; });
+
+  function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+
+  function generateQuestion() {
+    const mask = masks[Math.floor(Math.random() * masks.length)];
+    const others = shuffle(masks.filter(m => m.id !== mask.id)).slice(0, 3);
+    const choices = shuffle([mask, ...others]);
+
+    if (mode === 'name') {
+      return {
+        mask,
+        prompt: `次の説明の能面は何でしょう？\n\n「${mask.description}」\n\n特徴: ${mask.features}`,
+        choices: choices.map(m => m.name),
+        answer: mask.name,
+        explanation: `正解は「${mask.name}」です。${mask.description}`,
+        catKey: mask.category
+      };
+    } else if (mode === 'play') {
+      const play = mask.plays[Math.floor(Math.random() * mask.plays.length)];
+      return {
+        mask,
+        prompt: `演目「${play}」で使われる能面はどれでしょう？`,
+        choices: choices.map(m => m.name),
+        answer: mask.name,
+        explanation: `正解は「${mask.name}」です。「${play}」では ${mask.type} として登場し、${mask.description}`,
+        catKey: mask.category
+      };
+    } else {
+      return {
+        mask,
+        prompt: `次の特徴を持つ能面はどれでしょう？\n\n「${mask.features}」\n\n（${mask.type}）`,
+        choices: choices.map(m => m.name),
+        answer: mask.name,
+        explanation: `正解は「${mask.name}」です。${mask.description}`,
+        catKey: mask.category
+      };
+    }
+  }
+
+  function renderQuiz() {
+    currentQ = generateQuestion();
+    answered = false;
+    const area = document.getElementById('quizArea');
+    area.innerHTML = '';
+
+    // Score bar
+    const scoreDiv = document.createElement('div');
+    scoreDiv.className = 'flex items-center justify-between mb-3 text-sm';
+
+    const scoreText = document.createElement('span');
+    scoreText.style.color = '#c8960a';
+    scoreText.textContent = `正解: ${score.correct} / ${score.total}`;
+    scoreDiv.appendChild(scoreText);
+
+    const streakText = document.createElement('span');
+    streakText.style.color = '#a08050';
+    streakText.textContent = `連続正解: ${streak} 🔥 (最高: ${bestStreak})`;
+    scoreDiv.appendChild(streakText);
+    area.appendChild(scoreDiv);
+
+    // Mask emoji
+    const emojiDiv = document.createElement('div');
+    emojiDiv.className = 'text-6xl text-center my-4';
+    emojiDiv.textContent = currentQ.mask.emoji;
+    emojiDiv.setAttribute('aria-hidden', 'true');
+    area.appendChild(emojiDiv);
+
+    // Prompt
+    const promptDiv = document.createElement('div');
+    promptDiv.className = 'text-sm mb-5 leading-relaxed';
+    promptDiv.style.color = '#d0c0a0';
+    promptDiv.style.whiteSpace = 'pre-line';
+    promptDiv.textContent = currentQ.prompt;
+    area.appendChild(promptDiv);
+
+    // Choices
+    const choicesDiv = document.createElement('div');
+    choicesDiv.className = 'grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4';
+
+    currentQ.choices.forEach(choice => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.textContent = choice;
+      btn.addEventListener('click', function() { handleAnswer(choice, btn, choicesDiv); });
+      choicesDiv.appendChild(btn);
+    });
+    area.appendChild(choicesDiv);
+
+    // Explanation placeholder
+    const explDiv = document.createElement('div');
+    explDiv.id = 'explanation';
+    explDiv.className = 'hidden text-sm p-3 rounded-lg mb-3';
+    area.appendChild(explDiv);
+
+    // Next button
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'btn-gold w-full hidden';
+    nextBtn.id = 'nextBtn';
+    nextBtn.textContent = '次の問題へ →';
+    nextBtn.addEventListener('click', renderQuiz);
+    area.appendChild(nextBtn);
+  }
+
+  function handleAnswer(choice, btn, choicesDiv) {
+    if (answered) return;
+    answered = true;
+    score.total++;
+    catStats[currentQ.catKey].total++;
+
+    const isCorrect = choice === currentQ.answer;
+    if (isCorrect) {
+      score.correct++;
+      catStats[currentQ.catKey].correct++;
+      streak++;
+      if (streak > bestStreak) bestStreak = streak;
+      btn.classList.add('correct');
+      btn.textContent = '✓ ' + choice;
+    } else {
+      btn.classList.add('wrong');
+      btn.textContent = '✗ ' + choice;
+      streak = 0;
+      // Highlight correct
+      choicesDiv.querySelectorAll('.choice-btn').forEach(b => {
+        if (b.textContent === currentQ.answer) b.classList.add('reveal');
+      });
+    }
+
+    // Disable all
+    choicesDiv.querySelectorAll('.choice-btn').forEach(b => { b.disabled = true; });
+
+    // Explanation
+    const explDiv = document.getElementById('explanation');
+    explDiv.textContent = (isCorrect ? '✓ 正解！ ' : '✗ 不正解。 ') + currentQ.explanation + `\n使用演目: ${currentQ.mask.plays.join('、')}`;
+    explDiv.style.background = isCorrect ? '#052a05' : '#2a0505';
+    explDiv.style.borderLeft = isCorrect ? '4px solid #22c55e' : '4px solid #ef4444';
+    explDiv.style.color = isCorrect ? '#86efac' : '#fca5a5';
+    explDiv.style.whiteSpace = 'pre-line';
+    explDiv.classList.remove('hidden');
+
+    document.getElementById('nextBtn').classList.remove('hidden');
+    saveStats();
+  }
+
+  function renderStats() {
+    const area = document.getElementById('quizArea');
+    area.innerHTML = '';
+
+    const h2 = document.createElement('h2');
+    h2.className = 'text-base font-bold mb-4';
+    h2.textContent = '成績・正答率';
+    area.appendChild(h2);
+
+    // Overall
+    const overall = document.createElement('div');
+    overall.className = 'mb-4 p-3 rounded-lg';
+    overall.style.background = '#3a2a0a';
+
+    const pct = score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
+    const ov1 = document.createElement('div');
+    ov1.className = 'flex justify-between text-sm mb-1';
+    const ov1l = document.createElement('span');
+    ov1l.textContent = '総合正答率';
+    const ov1r = document.createElement('span');
+    ov1r.style.color = '#c8960a';
+    ov1r.textContent = `${score.correct} / ${score.total} （${pct}%）`;
+    ov1.appendChild(ov1l);
+    ov1.appendChild(ov1r);
+    overall.appendChild(ov1);
+
+    const barBg = document.createElement('div');
+    barBg.className = 'bar-bg';
+    const barFill = document.createElement('div');
+    barFill.className = 'bar-fill';
+    barFill.style.width = pct + '%';
+    barBg.appendChild(barFill);
+    overall.appendChild(barBg);
+
+    const streak2 = document.createElement('div');
+    streak2.className = 'text-xs mt-2';
+    streak2.style.color = '#a08050';
+    streak2.textContent = `連続最高記録: ${bestStreak} 🔥`;
+    overall.appendChild(streak2);
+
+    area.appendChild(overall);
+
+    // Per category
+    const h3 = document.createElement('div');
+    h3.className = 'text-sm font-bold mb-2';
+    h3.style.color = '#c8960a';
+    h3.textContent = 'カテゴリ別正答率';
+    area.appendChild(h3);
+
+    categories.forEach(cat => {
+      const st = catStats[cat];
+      const cp = st.total > 0 ? Math.round((st.correct / st.total) * 100) : 0;
+      const row = document.createElement('div');
+      row.className = 'mb-3';
+
+      const rh = document.createElement('div');
+      rh.className = 'flex justify-between text-sm mb-1';
+      const rhl = document.createElement('span');
+      rhl.textContent = cat;
+      const rhr = document.createElement('span');
+      rhr.style.color = '#a08050';
+      rhr.textContent = st.total > 0 ? `${st.correct}/${st.total} (${cp}%)` : '未回答';
+      rh.appendChild(rhl);
+      rh.appendChild(rhr);
+      row.appendChild(rh);
+
+      const bg = document.createElement('div');
+      bg.className = 'bar-bg';
+      const fill = document.createElement('div');
+      fill.className = 'bar-fill';
+      fill.style.width = cp + '%';
+      bg.appendChild(fill);
+      row.appendChild(bg);
+      area.appendChild(row);
+    });
+
+    const btn = document.createElement('button');
+    btn.className = 'btn-gold mt-4 w-full';
+    btn.textContent = 'クイズに戻る';
+    btn.addEventListener('click', function() {
+      mode = 'name';
+      updateTabs();
+      renderQuiz();
+    });
+    area.appendChild(btn);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'btn-outline mt-2 w-full';
+    resetBtn.textContent = '成績をリセット';
+    resetBtn.addEventListener('click', function() {
+      score = { total: 0, correct: 0 };
+      streak = 0; bestStreak = 0;
+      categories.forEach(c => { catStats[c] = { total: 0, correct: 0 }; });
+      saveStats();
+      renderStats();
+    });
+    area.appendChild(resetBtn);
+  }
+
+  function updateTabs() {
+    ['name','play','feature','stats'].forEach(m => {
+      const btn = document.getElementById('tab' + m.charAt(0).toUpperCase() + m.slice(1));
+      if (btn) btn.className = 'tab-btn ' + (m === mode ? 'tab-active' : 'tab-inactive');
+    });
+  }
+
+  function saveStats() {
+    localStorage.setItem('noh-quiz-stats', JSON.stringify({ score, catStats, streak, bestStreak }));
+  }
+
+  function loadStats() {
+    try {
+      const d = JSON.parse(localStorage.getItem('noh-quiz-stats'));
+      if (d) { score = d.score || score; catStats = d.catStats || catStats; streak = d.streak || 0; bestStreak = d.bestStreak || 0; }
+    } catch {}
+  }
+
+  // Tab events
+  ['name','play','feature','stats'].forEach(m => {
+    const id = 'tab' + m.charAt(0).toUpperCase() + m.slice(1);
+    document.getElementById(id).addEventListener('click', function() {
+      mode = m;
+      updateTabs();
+      if (m === 'stats') renderStats();
+      else renderQuiz();
+    });
+  });
+
+  loadStats();
+  renderQuiz();
+})();
+</script>
+</body>
+</html>
